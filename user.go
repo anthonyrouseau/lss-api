@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -84,4 +85,26 @@ func dbNewUser(user *User) (int64, error) {
 	}
 	fmt.Println("created new user")
 	return id, nil
+}
+
+func dbSearchUsername(searchValue string, offset string) ([]*User, error) {
+	var users []*User
+	rows, err := db.Query("SELECT id, username, summonerId FROM account WHERE username LIKE CONCAT(?,'%') LIMIT 10 OFFSET ?", searchValue, offset)
+	if err != nil {
+		return users, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var user User
+		err := rows.Scan(&user.Id, &user.Username, &user.SummonerId)
+		if err != nil {
+			log.Fatal(err)
+		}
+		users = append(users, &user)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal()
+	}
+	return users, nil
 }
