@@ -7,19 +7,22 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
+// ErrResponse represents an error to be sent to the client
 type ErrResponse struct {
 	Err            error  `json:"-"`
 	HTTPStatusCode int    `json:"-"`
-	StatusText     string `json:status`
-	AppCode        uint16 `json:code,omitempty`
-	ErrorText      string `json:error,omitempty`
+	StatusText     string `json:"status"`
+	AppCode        uint16 `json:"code,omitempty"`
+	ErrorText      string `json:"error,omitempty"`
 }
 
+// Render provides preprocessing before error response sent to client
 func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	render.Status(r, e.HTTPStatusCode)
 	return nil
 }
 
+// ErrBadRequest is a Bad Request error
 func ErrBadRequest(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -29,6 +32,7 @@ func ErrBadRequest(err error) render.Renderer {
 	}
 }
 
+// ErrDB is and error resulting from a database query or process
 func ErrDB(err error) render.Renderer {
 	e := err.(*mysql.MySQLError)
 	return &ErrResponse{
@@ -40,6 +44,7 @@ func ErrDB(err error) render.Renderer {
 	}
 }
 
+// ErrRender is an error that occurs when a render method is called
 func ErrRender(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -49,6 +54,7 @@ func ErrRender(err error) render.Renderer {
 	}
 }
 
+// ErrAccountLink is an error that occurs when trying to link summoner to account
 func ErrAccountLink(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -58,6 +64,7 @@ func ErrAccountLink(err error) render.Renderer {
 	}
 }
 
+// ErrUnauthorized is an error that occurs when a user is not authorized
 func ErrUnauthorized(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -67,6 +74,7 @@ func ErrUnauthorized(err error) render.Renderer {
 	}
 }
 
+// ErrForbidden is an error that occurs when something is not allowed by the app
 func ErrForbidden(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,

@@ -13,64 +13,62 @@ import (
 	"github.com/go-chi/render"
 )
 
+// User represents a user in the database
 type User struct {
-	Id         int64  `json:"id,omitempty"`
+	ID         int64  `json:"id,omitempty"`
 	Username   string `json:"username,omitempty"`
 	Password   string `json:"password,omitempty"`
 	Email      string `json:"email,omitempty"`
-	SummonerId int    `json:"summonerId,omitempty"`
+	SummonerID int    `json:"summonerId,omitempty"`
 }
 
+// UserRequest represents a request to user routes
 type UserRequest struct {
 	*User
-	ProtectedId  int64  `json:"id"`
+	ProtectedID  int64  `json:"id"`
 	SummonerName string `json:"summonerName"`
 	Code         string `json:"code"`
 }
 
+// UserResponse represents response from user routes
 type UserResponse struct {
 	*User
 }
 
-type UserPayload struct {
-	*User
-}
-
+// RiotResponse represents a response from riot api
 type RiotResponse struct {
-	SummonerId int `json:"id"`
+	SummonerID int `json:"id"`
 }
 
+// Bind allows for preprocessing of user requests
 func (u *UserRequest) Bind(r *http.Request) error {
 	if u.User == nil {
 		return errors.New("missing user fields")
 	}
 
-	u.ProtectedId = -1 //reset protected Id
+	u.ProtectedID = -1 //reset protected Id
 	return nil
 }
 
-func NewUserPayload(user *User) *UserPayload {
-	return &UserPayload{User: user}
-}
-
+// NewUserResponse creates a user response from user
 func NewUserResponse(user *User) *UserResponse {
 	resp := &UserResponse{User: user}
 	if resp.User == nil {
-		// try getting user from database
-		// if you get a user
-		// set the resp.User = NewUserPayload(user)
 	}
 	return resp
 }
 
+// Render allows for preprocessing of user response
 func (ur *UserResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	// pre-processing before resposne is changed to json and sent
 	ur.Password = "" //make sure password isn't sent
 	return nil
 }
 
+// UserListResponse is a list of user responses
 type UserListResponse []*UserResponse
 
+// NewUserListResponse creates list of user responses from users
 func NewUserListResponse(users []*User) []render.Renderer {
 	list := []render.Renderer{}
 	for _, user := range users {
@@ -79,7 +77,7 @@ func NewUserListResponse(users []*User) []render.Renderer {
 	return list
 }
 
-func checkSummonerId(summonerName, code string) (int, error) {
+func checkSummonerID(summonerName, code string) (int, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://na1.api.riotgames.com/lol/summoner/v3/summoners/by-name/"+summonerName, nil)
 	if err != nil {
@@ -103,7 +101,7 @@ func checkSummonerId(summonerName, code string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	req, err = http.NewRequest("GET", "https://na1.api.riotgames.com/lol/platform/v3/third-party-code/by-summoner/"+strconv.Itoa(summonerInfo.SummonerId), nil)
+	req, err = http.NewRequest("GET", "https://na1.api.riotgames.com/lol/platform/v3/third-party-code/by-summoner/"+strconv.Itoa(summonerInfo.SummonerID), nil)
 	if err != nil {
 		return 0, err
 	}
@@ -126,7 +124,7 @@ func checkSummonerId(summonerName, code string) (int, error) {
 	if strings.Compare(userCode, code) != 0 {
 		return 0, errors.New("code does not match")
 	}
-	return summonerInfo.SummonerId, nil
+	return summonerInfo.SummonerID, nil
 }
 
 func dbNewUser(user *User) (int64, error) {
@@ -135,7 +133,7 @@ func dbNewUser(user *User) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	res, err := stmt.Exec(user.Username, user.Password, user.Email, user.SummonerId)
+	res, err := stmt.Exec(user.Username, user.Password, user.Email, user.SummonerID)
 	if err != nil {
 		return 0, err
 	}
@@ -156,7 +154,7 @@ func dbSearchUsername(searchValue string, offset string) ([]*User, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var user User
-		err := rows.Scan(&user.Id, &user.Username, &user.SummonerId)
+		err := rows.Scan(&user.ID, &user.Username, &user.SummonerID)
 		if err != nil {
 			return users, err
 		}

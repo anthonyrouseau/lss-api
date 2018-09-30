@@ -8,23 +8,27 @@ import (
 	"github.com/go-chi/render"
 )
 
+// Team is a representation of a Team entity in the database
 type Team struct {
-	Id      int64  `json:"teamId,omitempty"`
+	ID      int64  `json:"teamId,omitempty"`
 	Name    string `json:"name,omitempty"`
 	Captain int64  `json:"captain,omitempty"`
 }
 
+// TeamRequest is a representation of request to team routes
 type TeamRequest struct {
 	*Team
-	ProtectedId int64  `json:"userId"`
+	ProtectedID int64  `json:"userId"`
 	Action      string `json:"action,omitempty"`
-	Invitee     int64  `json:invitee,omitempty`
+	Invitee     int64  `json:"invitee,omitempty"`
 }
 
+// TeamResponse is representation of response from team routes
 type TeamResponse struct {
 	*Team
 }
 
+// Bind allows for preprocessing of requests
 func (tr *TeamRequest) Bind(r *http.Request) error {
 	if tr.Team == nil {
 		return errors.New("missing team fields")
@@ -33,6 +37,7 @@ func (tr *TeamRequest) Bind(r *http.Request) error {
 	return nil
 }
 
+// NewTeamResponse creates a TeamResponse
 func NewTeamResponse(t *Team) *TeamResponse {
 	resp := &TeamResponse{Team: t}
 	if resp.Team == nil {
@@ -41,13 +46,16 @@ func NewTeamResponse(t *Team) *TeamResponse {
 	return resp
 }
 
+// Render allows for preprocessing of TeamResponse
 func (tr *TeamResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	// make changes to team response before sent
 	return nil
 }
 
+// TeamListResponse is a list of TeamResponses
 type TeamListResponse []*TeamResponse
 
+// NewTeamListResponse creates a list of team responses
 func NewTeamListResponse(teams []*Team) []render.Renderer {
 	list := []render.Renderer{}
 	for _, team := range teams {
@@ -72,24 +80,24 @@ func dbNewTeam(team *Team) (int64, error) {
 	return id, nil
 }
 
-func dbAddToRoster(userId, teamId int64) error {
-	stmt, err := db.Prepare("INSERT INTO roster(teamId,userId) VALUES(?,?)")
+func dbAddToRoster(userID, teamID int64) error {
+	stmt, err := db.Prepare("INSERT INTO roster(teamID,userID) VALUES(?,?)")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(teamId, userId)
+	_, err = stmt.Exec(teamID, userID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func dbRemoveFromRoster(userId, teamId int64) error {
-	stmt, err := db.Prepare("DELETE FROM roster WHERE teamId=? AND userId=?")
+func dbRemoveFromRoster(userID, teamID int64) error {
+	stmt, err := db.Prepare("DELETE FROM roster WHERE teamID=? AND userID=?")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(teamId, userId)
+	_, err = stmt.Exec(teamID, userID)
 	if err != nil {
 		return err
 	}
@@ -105,7 +113,7 @@ func dbSearchTeamName(searchValue, offset string) ([]*Team, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var team Team
-		err := rows.Scan(&team.Id, &team.Name, &team.Captain)
+		err := rows.Scan(&team.ID, &team.Name, &team.Captain)
 		if err != nil {
 			return teams, err
 		}
@@ -118,16 +126,16 @@ func dbSearchTeamName(searchValue, offset string) ([]*Team, error) {
 	return teams, nil
 }
 
-func dbGetUserTeams(userId string) ([]*Team, error) {
+func dbGetUserTeams(userID string) ([]*Team, error) {
 	var teams []*Team
-	rows, err := db.Query("SELECT id, name, captain FROM team INNER JOIN roster WHERE team.id=roster.teamId AND roster.userId = ?", userId)
+	rows, err := db.Query("SELECT id, name, captain FROM team INNER JOIN roster WHERE team.ID=roster.teamID AND roster.userID = ?", userID)
 	if err != nil {
 		return teams, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var team Team
-		err := rows.Scan(&team.Id, &team.Name, &team.Captain)
+		err := rows.Scan(&team.ID, &team.Name, &team.Captain)
 		if err != nil {
 			return teams, err
 		}
@@ -140,29 +148,28 @@ func dbGetUserTeams(userId string) ([]*Team, error) {
 	return teams, nil
 }
 
-func dbEditRoster(action string, userId, teamId int64) error {
+func dbEditRoster(action string, userID, teamID int64) error {
 	switch action {
 	case "add":
-		return dbAddToRoster(userId, teamId)
+		return dbAddToRoster(userID, teamID)
 	case "remove":
 		var value bool
-		value, err := isCaptain(userId, teamId)
+		value, err := isCaptain(userID, teamID)
 		if err != nil {
 			return err
 		}
 		if value {
 			return errors.New("captain cannot leave team")
-		} else {
-			return dbRemoveFromRoster(userId, teamId)
 		}
+		return dbRemoveFromRoster(userID, teamID)
 	default:
 		return errors.New("action is not valid")
 	}
 }
 
-func isCaptain(userId, teamId int64) (bool, error) {
+func isCaptain(userID, teamID int64) (bool, error) {
 	var captain string
-	err := db.QueryRow("SELECT captain FROM team WHERE captain=? AND id=?", userId, teamId).Scan(&captain)
+	err := db.QueryRow("SELECT captain FROM team WHERE captain=? AND id=?", userID, teamID).Scan(&captain)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil

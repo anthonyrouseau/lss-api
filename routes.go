@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/render"
 )
 
+// Routes is the index of all api routes where paths are mounted
 func Routes() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(
