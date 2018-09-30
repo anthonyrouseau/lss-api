@@ -42,6 +42,12 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := data.User
+	summonerId, err := checkSummonerId(data.SummonerName, data.Code)
+	if err != nil {
+		render.Render(w, r, ErrAccountLink(err))
+		return
+	}
+	user.SummonerId = summonerId
 	id, err := dbNewUser(user)
 	if err != nil {
 		render.Render(w, r, ErrDB(err))

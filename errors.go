@@ -48,3 +48,12 @@ func ErrRender(err error) render.Renderer {
 		ErrorText:      err.Error(),
 	}
 }
+
+func ErrAccountLink(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 400,
+		StatusText:     "Could Not Link Account",
+		ErrorText:      err.Error(),
+	}
+}

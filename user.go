@@ -1,10 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/render"
 )
@@ -14,12 +19,14 @@ type User struct {
 	Username   string `json:"username,omitempty"`
 	Password   string `json:"password,omitempty"`
 	Email      string `json:"email,omitempty"`
-	SummonerId string `json:"summonerId,omitempty"`
+	SummonerId int    `json:"summonerId,omitempty"`
 }
 
 type UserRequest struct {
 	*User
-	ProtectedId int `json:"id"`
+	ProtectedId  int    `json:"id"`
+	SummonerName string `json:"summonerName"`
+	Code         string `json:"code"`
 }
 
 type UserResponse struct {
@@ -28,6 +35,10 @@ type UserResponse struct {
 
 type UserPayload struct {
 	*User
+}
+
+type RiotResponse struct {
+	SummonerId int `json:"id"`
 }
 
 func (u *UserRequest) Bind(r *http.Request) error {
@@ -67,6 +78,55 @@ func NewUserListResponse(users []*User) []render.Renderer {
 		list = append(list, NewUserResponse(user))
 	}
 	return list
+}
+
+func checkSummonerId(summonerName, code string) (int, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "https://na1.api.riotgames.com/lol/summoner/v3/summoners/by-name/"+summonerName, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Add("X-Riot-Token", os.Getenv("riotapikey"))
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return 0, errors.New("could not find summoner")
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, err
+	}
+	summonerInfo := &RiotResponse{}
+	err = json.Unmarshal(body, summonerInfo)
+	if err != nil {
+		return 0, err
+	}
+	req, err = http.NewRequest("GET", "https://na1.api.riotgames.com/lol/platform/v3/third-party-code/by-summoner/"+strconv.Itoa(summonerInfo.SummonerId), nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Add("X-Riot-Token", os.Getenv("riotapikey"))
+	resp, err = client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return 0, errors.New("code does not match")
+	}
+	var userCode string
+	body, err = ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(body, &userCode)
+	if err != nil {
+		return 0, err
+	}
+	if strings.Compare(userCode, code) != 0 {
+		return 0, errors.New("code does not match")
+	}
+	return summonerInfo.SummonerId, nil
 }
 
 func dbNewUser(user *User) (int64, error) {
