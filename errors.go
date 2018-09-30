@@ -57,3 +57,21 @@ func ErrAccountLink(err error) render.Renderer {
 		ErrorText:      err.Error(),
 	}
 }
+
+func ErrUnauthorized(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 401,
+		StatusText:     "Unauthorized",
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrForbidden(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 403,
+		StatusText:     "Forbidden",
+		ErrorText:      err.Error(),
+	}
+}

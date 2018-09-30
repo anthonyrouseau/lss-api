@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -24,7 +23,7 @@ type User struct {
 
 type UserRequest struct {
 	*User
-	ProtectedId  int    `json:"id"`
+	ProtectedId  int64  `json:"id"`
 	SummonerName string `json:"summonerName"`
 	Code         string `json:"code"`
 }
@@ -45,7 +44,7 @@ func (u *UserRequest) Bind(r *http.Request) error {
 	if u.User == nil {
 		return errors.New("missing user fields")
 	}
-	// this is where you could clear out a protected id field
+
 	u.ProtectedId = -1 //reset protected Id
 	return nil
 }
@@ -118,6 +117,7 @@ func checkSummonerId(summonerName, code string) (int, error) {
 		return 0, errors.New("code does not match")
 	}
 	var userCode string
+	// body here is just a string so probably don't need to json.Unmarshal
 	body, err = ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(body, &userCode)
 	if err != nil {
@@ -158,13 +158,13 @@ func dbSearchUsername(searchValue string, offset string) ([]*User, error) {
 		var user User
 		err := rows.Scan(&user.Id, &user.Username, &user.SummonerId)
 		if err != nil {
-			log.Fatal(err)
+			return users, err
 		}
 		users = append(users, &user)
 	}
 	err = rows.Err()
 	if err != nil {
-		log.Fatal()
+		return users, err
 	}
 	return users, nil
 }

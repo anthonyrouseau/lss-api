@@ -22,5 +22,6 @@ func Routes() *chi.Mux {
 		w.Write([]byte("api running"))
 	})
 	r.Mount("/user", UserRoutes())
+	r.Mount("/team", TeamRoutes())
 	return r
 }
